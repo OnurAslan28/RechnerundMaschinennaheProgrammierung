@@ -1,0 +1,98 @@
+;******************** (C) COPYRIGHT HAW-Hamburg ********************************
+;* File Name          : main.s
+;* Author             : Alfred Lohmann
+;* Author             : Tobias Jaehnichen	
+;* Version            : V2.0
+;* Date               : 23.04.2017
+;* Description        : This is a simple main.
+;					  : The output is send to UART 1. Open Serial Window when 
+;					  : when debugging. Select UART #1 in Serial Window selection.
+;					  :
+;					  : Replace this main with yours.
+;
+;*******************************************************************************
+
+	EXTERN Init_TI_Board		; Initialize the serial line
+	EXTERN ADC3_CH7_DMA_Config  ; Initialize the ADC
+	;EXTERN	initHW				; Init Timer
+	EXTERN	puts				; C output function
+	EXTERN	TFT_puts			; TFT output function
+	EXTERN  TFT_cls				; TFT clear function
+	EXTERN  TFT_gotoxy      	; TFT goto x y function  
+	EXTERN  Delay				; Delay (ms) function
+	EXTERN GPIO_G_SET			; Set output-LEDs
+	EXTERN GPIO_G_CLR			; Clear output-LEDs
+	EXTERN GPIO_G_PIN			; Output-LEDs status
+	EXTERN GPIO_E_PIN			; Button status
+	EXTERN ADC3_DR				; ADC Value (ADC3_CH7_DMA_Config has to be called before)
+
+;**************************************************
+; Data section, aligned on 16-byte boundery
+;**************************************************
+		AREA MyData, DATA, align = 4
+
+DataList 	DCD 35, -1, 13, -4096, 8224, 101, -3, -5, -310, 0, 65
+DataListEnd DCD 0
+
+		GLOBAL DataList		
+		GLOBAL DataListEnd
+
+;********************************************
+; Code section, aligned on 8-byte boundery
+;********************************************
+
+	AREA |.text|, CODE, READONLY, ALIGN = 3
+
+;--------------------------------------------
+; main subroutine
+;--------------------------------------------
+	EXPORT main [CODE]
+	
+main		PROC
+
+			BL	Init_TI_Board	; Initialize the serial line to TTY
+							; for compatability to out TI-C-Board
+							
+			mov r0, #2_1	;setzen von r0 auf true für getauscht
+			
+WHILE_01 	cmp r0, #2_1	;While r0 = 1 (getauscht)
+			beq DO_01		;springen zu DO_01, wenn Bedingung erfüllt
+			b	ENDWHILE_01	;springen zu ENDWHILE_01, wenn  nicht erfüllt
+			
+DO_01		mov r0, #2_0    ;r0 auf 0 setzen (nicht getauscht)
+			ldr r1, =DataList ;Adresse von DataList in r1 speichern -> Zeiger auf den ersten Wert setzen
+			ldr r2, [r1]	;Wort an der Adresse von DataList in r2 speichern
+			b WHILE_02 ;zu WHILE_01 springen
+
+WHILE_02	ldr r5, =DataListEnd ;Adresse von DataList in r5 speichern
+			sub r5,#4 ;4 von DataListEnd Adresse abziehen, um Startwert des letzten Werts in DataList zu erhalten
+			cmp r1, r5  ;r1 mit r5 Vergleichen, wenn Zeiger nicht auf letzte Adresse zeigt -> DO_02
+			bne DO_02	;zu DO_02, wenn Zeiger nicht auf letzte Adresse zeigt
+			b WHILE_01	;sonst zu WHILE_01
+
+DO_02		b IF_01  ;zu IF_01 springen
+
+IF_01		ldr r3, [r1]   ;ersten 4 Byte (Wort) an der Adresse von r1 (DataList) in r3 laden -> aktueller Wert
+			ldr r4, [r1,#4] ;zweiten 4 Byte (Wort) an der Adresse von r1 (DataList) in r4 laden -> folgender Wert
+			cmp r3,r4 ;beide Werte vergleichen
+			bgt THEN_01	;wenn erster Wert größer als zweiter zu THEN_01
+			b ENDIF_01	;sonst zu ENDIF_01
+			
+THEN_01		str r4, [r1] ;folgenden Wert aus r4 an der Adresse von DataList speichern
+			str r3, [r1,#4] ;aktuellen Wert an der Adresse von DataList + 4 speichern
+			mov r0, #2_1	;getauscht Flag setzen
+ENDIF_01
+
+			add r1,#4	;r1 zeigt auf nächsten Werte (vorherige Adresse + 4)
+			b WHILE_02	;zu WHILE_02
+ENDWHILE_01
+ENDWHILE_02
+
+			
+		
+forever		b	forever		; nowhere to retun if main ends		
+		ENDP
+	
+		ALIGN
+       
+		END

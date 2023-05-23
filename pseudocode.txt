@@ -1,0 +1,37 @@
+
+START_WAIT
+
+START_DELAY
+
+Bälkenlänge = 0
+
+tasteS7 = false
+
+if (Balkenlänge = 15) then
+
+SHOW_RESULT
+
+"Zeitverzögerung 3s"
+
+START_WAIT
+
+else 
+
+tasteS7 = true
+
+if (tasteS7 = true) then
+
+SHOW_RESULT
+
+"Zeitverzögerung 3s"
+
+START_WAIT
+
+else
+
+RUN
+
+Balkenlänge = Balkenlänge +1
+
+printf (Balkenlänge auf Port1)
+

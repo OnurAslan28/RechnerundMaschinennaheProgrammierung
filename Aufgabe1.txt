@@ -1,0 +1,81 @@
+;******************** (C) COPYRIGHT HAW-Hamburg ********************************
+;* File Name          : main.s
+;* Author             : Alfred Lohmann
+;* Author             : Tobias Jaehnichen	
+;* Version            : V2.0
+;* Date               : 23.04.2017
+;* Description        : This is a simple main.
+;					  : The output is send to UART 1. Open Serial Window when 
+;					  : when debugging. Select UART #1 in Serial Window selection.
+;					  :
+;					  : Replace this main with yours.
+;
+;*******************************************************************************
+
+	EXTERN Init_TI_Board		; Initialize the serial line
+	EXTERN ADC3_CH7_DMA_Config  ; Initialize the ADC
+	;EXTERN	initHW				; Init Timer
+	EXTERN	puts				; C output function
+	EXTERN	TFT_puts			; TFT output function
+	EXTERN  TFT_cls				; TFT clear function
+	EXTERN  TFT_gotoxy      	; TFT goto x y function  
+	EXTERN  Delay				; Delay (ms) function
+	EXTERN GPIO_G_SET			; Set output-LEDs
+	EXTERN GPIO_G_CLR			; Clear output-LEDs
+	EXTERN GPIO_G_PIN			; Output-LEDs status
+	EXTERN GPIO_E_PIN			; Button status
+	EXTERN ADC3_DR				; ADC Value (ADC3_CH7_DMA_Config has to be called before)
+
+; Schreibkonvention für Schlüsselwörter im ARM-Assembler (Keil uVision)
+; Groß-/Kleinschreibung egal, aber nicht 'mixed' im Schlüsselwort
+; Konvention h i e r: Direktiven GROSS, Parameter für Direktiven: klein
+;
+; label: Anfang immer in Spalte 0, case sensitive
+; Direktiven: mindestens ein blank am Anfang
+; Konstanten: binär: 2_10111000... / dezimal: 12345... / hexadezimal: 0xaffe…
+;
+;********************************************
+; Initialisierte globale Daten (Data-RAM mit Startadresse 0x20000000)
+;********************************************
+    AREA MyData, DATA, align = 4 ; align !!=!! : p a r a m e t e r für den Block MyData,
+                                 ; Grenze des B l o c k s: modulo 4 = 2^2
+                                 ; 16-Byte-Alignment wg. Darstellung im Memory-Fenster
+    GLOBAL MyData, MeinNumFeld, MeinHaWoFeld, MeinTextFeld, MeinByteFeld, MeinBlock
+; DCD: 32 Bit (word) / DCW: 16 Bit (halfword) / DCB: Byte
+MeinNumFeld DCD 0x22, 2_00111110, -52, 78, 0x60000000, 0x50000000
+MeinHaWoFeld DCW 0x1234, 0x5678, 0x9abc, 0xdef0
+MeinTextFeld DCB "ABab0123",0 ; Nullterminierung bei Strings
+    ALIGN 4 ; hier nur Didaktik wg. besserer Darstellung im Memory-Fenster
+MeinByteFeld DCB 0xef, 0xdc, 0xba, 0x98
+;********************************************
+; nicht Initialisierte globale Daten (Data-RAM)
+;********************************************
+    ALIGN 4 ; empfehlenswert für hohe Performance, wenn in MeinBlock
+MeinBlock SPACE 0x20 ; Worte oder Halbworte abgelegt werden
+
+
+;********************************************
+; Code section, aligned on 8-byte boundery
+;********************************************
+
+	AREA |.text|, CODE, READONLY, ALIGN = 3
+
+;--------------------------------------------
+; main subroutine
+;--------------------------------------------
+	EXPORT main [CODE]
+	
+main	PROC
+    
+		mov r0,#0x12 ; Anw-01
+		mov r1,#-2 ; Anw-02
+		ldr r2,=0xfe543210 ; Anw-03
+
+		
+			
+forever	b	forever		; nowhere to retun if main ends		
+		ENDP
+	
+		ALIGN
+       
+		END

@@ -1,0 +1,110 @@
+;******************** (C) COPYRIGHT HAW-Hamburg ********************************
+;* File Name          : main.s
+;* Author             : Alfred Lohmann
+;* Author             : Tobias Jaehnichen	
+;* Version            : V2.0
+;* Date               : 13.04.2017
+;* Description        : This is a simple main. 
+;					  : It reads the ADC value and displays the most significant 8 bits
+;					  : on the LEDs D13 to D20.
+;					  : 
+;					  : Change this main according to the lab-task.
+;
+;*******************************************************************************
+
+	EXTERN Init_TI_Board		; Initialize the serial line
+	EXTERN ADC3_CH7_DMA_Config  ; Initialize the ADC
+	;EXTERN	initHW				; Init Timer
+	;EXTERN	puts				; C output function
+	;EXTERN TFT_puts			; TFT output function
+	;EXTERN TFT_cls				; TFT clear function
+	;EXTERN TFT_gotoxy      	; TFT goto x y function  
+	EXTERN Delay				; Delay (ms) function
+	EXTERN GPIO_G_SET			; Set output-LEDs
+	EXTERN GPIO_G_CLR			; Clear output-LEDs
+	;EXTERN GPIO_G_PIN			; Output-LEDs status
+	;EXTERN GPIO_E_PIN			; Button status
+	EXTERN ADC3_DR				; ADC Value (ADC3_CH7_DMA_Config has to be called before)
+
+;********************************************
+; Data section, aligned on 4-byte boundery
+;********************************************
+	
+	AREA MyData, DATA, align = 2
+		
+;********************************************
+; Code section, aligned on 8-byte boundery
+;********************************************
+
+	AREA |.text|, CODE, READONLY, ALIGN = 2
+
+; RN: Direktive, um Registern ‘Namen’ zu geben 
+adc_wert   			RN   7			; Wert!!!
+adc_dr	    		RN	 8			; Adresse!!	
+gpio_set   			RN   9
+gpio_clr   			RN   10
+
+;--------------------------------------------
+; main subroutine
+;--------------------------------------------
+	EXPORT main [CODE]
+		
+main		PROC
+
+			BL	Init_TI_Board	; Initialize the serial line to TTY
+							; for compatability to out TI-C-Board
+			BL 	ADC3_CH7_DMA_Config ;Initialize and config ADC3.7
+							
+		;	I/O-Adressen in Registern speichern
+			LDR     adc_dr, 	=ADC3_DR        	; Adresse des ADC
+			LDR     gpio_clr, 	=GPIO_G_CLR			; I/O löschen
+			LDR     gpio_set, 	=GPIO_G_SET			; I/O setzen
+
+messschleife
+			
+		
+for_01	
+			mov 	r1, #0	;Laufvariable in r1 auf 1 setzen
+			mov		r2, #16 ;Endwert in r2 auf 16 setzen (für 16 Durchläufe)
+			mov 	r11,#0 ;Akkumulator für Messwerte
+		
+until_01	
+			cmp		r1,r2		;Laufvariable mit Endwert vergleichen
+			bhs		enddo_01	;Wenn Laufvariable = Endwert springen zu enddo_01
+			
+do_01		
+			LDR 	adc_wert, [adc_dr]				; Messwert lesen
+			add		r11,r11,adc_wert 				;Wert im Akkumulator plus Messwert
+			
+step_01
+			add 	r1,#1							;Laufvariable um 1 erhöhen
+			b		until_01						;zu until_01 springen, um erneut Abbruchbedingung zu prüfen
+			
+enddo_01	
+			lsr 	r11,r11,#4						;Mittelwert aus den Messergebnissen bilden (Summe der Messwerte / 16)
+		
+; Balkenlänge ermitteln
+			lsr		r11,r11,#8 						;auf die ersten 4-bit des Wertes reduzieren (8 bit nach rechts verschieben)
+			mov 	r5,#1							;Konstante 1 in r5 laden, um Bitmuster zu erstellen
+			lsl 	r5,r11							;1 um Wert in r11 nach links verschieben
+			mov 	r4,#1							; r4 Konstante 1 laden, um Subktraktion für Bitmuster damit durchzuführen
+			sub		r4,r5,r4						;1 von Wert subtrahieren, um Bitmuster zu erhalten -> Bitmuster liegt dann in r4
+			
+		
+; LED Ausgabe
+			MOV		r5, #0xffff					
+			STRH	r5, [gpio_clr]					; LEDs loeschen
+			STRH	r4, [gpio_set]					; Ausgabe Bitmuster
+		
+			MOV		r0, #0x20
+			BL		Delay
+		
+			B       messschleife
+		
+		
+forever		B	forever		; nowhere to retun if main ends		
+		ENDP
+	
+		ALIGN
+       
+		END
